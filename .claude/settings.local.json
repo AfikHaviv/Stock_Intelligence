@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(npx next *)",
-      "Bash(python3 -)",
-      "Bash(npx tsc *)"
-    ]
-  }
-}
