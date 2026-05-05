@@ -3,7 +3,7 @@ services:
     name: stock-intelligence-api
     runtime: node
     rootDir: api
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/stocks/AAPL
     envVars:
