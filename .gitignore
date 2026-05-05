@@ -21,10 +21,9 @@ Thumbs.db
 
 # Editor
 .vscode/settings.json
-
-# Claude Code — keep all Claude config local
 .claude/
 CLAUDE.md
+GETTING_STARTED.md
 
 # TypeScript cache
 *.tsbuildinfo
