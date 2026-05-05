@@ -1,0 +1,174 @@
+import YahooFinance from 'yahoo-finance2';
+import { db } from '../db/client';
+
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
+
+export interface PriceRow {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+const HISTORY_START = new Date('2000-01-01');
+
+interface Quote {
+  date: Date;
+  open:   number | null;
+  high:   number | null;
+  low:    number | null;
+  close:  number | null;
+  volume: number | null;
+}
+
+async function insertQuotes(stockId: number, quotes: Quote[]) {
+  const valid = quotes.filter((q): q is Quote & { open: number; close: number } =>
+    q.open != null && q.close != null
+  );
+  if (valid.length === 0) return;
+
+  const params: unknown[] = [];
+  const placeholders = valid.map((q, i) => {
+    const b = i * 7;
+    params.push(stockId, q.date, q.open, q.high, q.low, q.close, q.volume ?? 0);
+    return `($${b+1},$${b+2},$${b+3},$${b+4},$${b+5},$${b+6},$${b+7})`;
+  });
+
+  await db.query(
+    `INSERT INTO price_history (stock_id, date, open, high, low, close, volume)
+     VALUES ${placeholders.join(',')}
+     ON CONFLICT (stock_id, date) DO NOTHING`,
+    params
+  );
+}
+
+// 2-year cutoff heuristic: if the oldest row predates 2 years ago the full
+// backfill to HISTORY_START has already run. Otherwise backfill now.
+async function ensureFullHistory(stockId: number, ticker: string): Promise<void> {
+  const { rows } = await db.query(
+    'SELECT MIN(date) AS oldest FROM price_history WHERE stock_id = $1',
+    [stockId]
+  );
+  const oldest: Date | null = rows[0].oldest;
+  const twoYearsAgo = new Date();
+  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
+  if (oldest && oldest <= twoYearsAgo) return; // history is already deep enough
+
+  const fetchUntil = oldest ?? new Date();
+  const result = await yahooFinance.chart(ticker, {
+    period1: HISTORY_START,
+    period2: fetchUntil,
+    interval: '1d',
+  });
+  await insertQuotes(stockId, result.quotes);
+}
+
+export async function getOrFetchStock(ticker: string): Promise<PriceRow[]> {
+  const upper = ticker.toUpperCase();
+  const existing = await db.query('SELECT id FROM stocks WHERE ticker = $1', [upper]);
+
+  if (existing.rows.length > 0) {
+    const stockId: number = existing.rows[0].id;
+    await ensureFullHistory(stockId, upper);
+    return getPriceHistory(stockId);
+  }
+
+  const result = await yahooFinance.chart(upper, {
+    period1: HISTORY_START,
+    period2: new Date(),
+    interval: '1d',
+  });
+
+  const stockInsert = await db.query(
+    'INSERT INTO stocks (ticker, name) VALUES ($1, $2) RETURNING id',
+    [upper, result.meta.longName ?? upper]
+  );
+  const stockId: number = stockInsert.rows[0].id;
+  await insertQuotes(stockId, result.quotes);
+
+  return getPriceHistory(stockId);
+}
+
+async function fetchIntraday(ticker: string, interval: '1h' | '30m' | '15m' | '1m', daysBack: number): Promise<PriceRow[]> {
+  const from = new Date();
+  from.setDate(from.getDate() - daysBack);
+
+  const result = await yahooFinance.chart(ticker.toUpperCase(), {
+    period1: from,
+    period2: new Date(),
+    interval,
+  });
+
+  return result.quotes
+    .filter((q) => q.open != null && q.close != null)
+    .map((q) => ({
+      date: q.date.toISOString(),
+      open: q.open as number,
+      high: q.high as number,
+      low: q.low as number,
+      close: q.close as number,
+      volume: q.volume ?? 0,
+    }));
+}
+
+export const getHourlyData = (ticker: string) => fetchIntraday(ticker, '1h',  59);
+export const get30MinData  = (ticker: string) => fetchIntraday(ticker, '30m', 59);
+export const get15MinData  = (ticker: string) => fetchIntraday(ticker, '15m', 59);
+
+export interface StockStats {
+  name:             string | null;
+  exchangeName:     string | null;
+  currency:         string | null;
+  marketCap:        number | null;
+  fiftyTwoWeekHigh: number | null;
+  fiftyTwoWeekLow:  number | null;
+  volume:           number | null;
+}
+
+export function normalizeExchange(
+  fullName: string | null | undefined,
+  exchangeCode: string | null | undefined,
+): string | null {
+  if (fullName) {
+    if (fullName.toLowerCase().includes('nasdaq')) return 'Nasdaq';
+    if (fullName.toLowerCase().includes('nyse'))   return 'NYSE';
+    return fullName;
+  }
+  return exchangeCode ?? null;
+}
+
+export async function getStockStats(ticker: string): Promise<StockStats> {
+  const q = await yahooFinance.quote(ticker.toUpperCase());
+  return {
+    name:             q.longName ?? q.shortName   ?? null,
+    exchangeName:     normalizeExchange(q.fullExchangeName, q.exchange),
+    currency:         q.currency                  ?? null,
+    marketCap:        q.marketCap                 ?? null,
+    fiftyTwoWeekHigh: q.fiftyTwoWeekHigh          ?? null,
+    fiftyTwoWeekLow:  q.fiftyTwoWeekLow           ?? null,
+    volume:           q.regularMarketVolume        ?? null,
+  };
+}
+
+export function dbRowToPriceRow(r: Record<string, unknown>): PriceRow {
+  return {
+    date:   (r.date as Date).toISOString().split('T')[0],
+    open:   parseFloat(r.open as string),
+    high:   parseFloat(r.high as string),
+    low:    parseFloat(r.low  as string),
+    close:  parseFloat(r.close as string),
+    volume: parseInt(r.volume as string, 10),
+  };
+}
+
+async function getPriceHistory(stockId: number): Promise<PriceRow[]> {
+  const result = await db.query(
+    `SELECT date, open, high, low, close, volume
+     FROM price_history WHERE stock_id = $1 ORDER BY date ASC`,
+    [stockId]
+  );
+  return result.rows.map(dbRowToPriceRow);
+}

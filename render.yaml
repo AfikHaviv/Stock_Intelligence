@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: stock-intelligence-api
+    runtime: node
+    rootDir: api
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/stocks/AAPL
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false          # Set this in Render dashboard → your Neon connection string
+      - key: CORS_ORIGIN
+        sync: false          # Set this to your Netlify URL, e.g. https://your-app.netlify.app
+      - key: PORT
+        value: "3001"

@@ -1,0 +1,21 @@
+[build]
+  # Run commands from the frontend directory
+  base    = "frontend"
+  command = "npm install && npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Required for Next.js App Router (SSR, image optimisation, etc.)
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Forward /api/* calls to the Render-hosted backend
+# Set NEXT_PUBLIC_API_URL in Netlify env vars to your Render URL.
+# This redirect is a fallback for any relative /api calls during preview builds.
+[[redirects]]
+  from   = "/api/*"
+  to     = "https://your-api.onrender.com/api/:splat"
+  status = 200
+  force  = true
