@@ -7,6 +7,7 @@ import {
   CandlestickData,
   CandlestickSeries,
   AreaSeries,
+  HistogramSeries,
   ISeriesApi,
   Time,
 } from 'lightweight-charts';
@@ -40,13 +41,13 @@ const HEADER = {
   light: { wrap: 'bg-slate-100',  title: 'text-slate-900', sub: 'text-slate-400', meta: 'text-slate-500' },
 };
 
-
 export default function StockChart({ data, ticker, companyName, exchangeName, currency, timeframe, interval, chartStyle, theme }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef     = useRef<IChartApi | null>(null);
-  const seriesRef    = useRef<ISeriesApi<'Candlestick'> | ISeriesApi<'Area'> | null>(null);
-  const themeRef     = useRef(theme);
-  themeRef.current   = theme;
+  const containerRef  = useRef<HTMLDivElement>(null);
+  const chartRef      = useRef<IChartApi | null>(null);
+  const seriesRef     = useRef<ISeriesApi<'Candlestick'> | ISeriesApi<'Area'> | null>(null);
+  const volumeRef     = useRef<ISeriesApi<'Histogram'> | null>(null);
+  const themeRef      = useRef(theme);
+  themeRef.current    = theme;
 
   const [change, setChange] = useState<{ abs: number; pct: number } | null>(null);
 
@@ -63,11 +64,17 @@ export default function StockChart({ data, ticker, companyName, exchangeName, cu
     });
     chartRef.current = chart;
 
+    // Push the price chart up so volume bars have room at the bottom
+    chart.priceScale('right').applyOptions({
+      scaleMargins: { top: 0.1, bottom: 0.25 },
+    });
+
     const fromIdx = getFromIndex(data, timeframe, interval);
     const ch = computeChange(data, fromIdx);
     setChange(ch);
     const isUp = (ch?.abs ?? 0) >= 0;
 
+    // ── Price series ─────────────────────────────────────────────────────────
     if (chartStyle === 'line') {
       const color = isUp ? COLOR_UP : COLOR_DOWN;
       const series = chart.addSeries(AreaSeries, {
@@ -94,22 +101,48 @@ export default function StockChart({ data, ticker, companyName, exchangeName, cu
       seriesRef.current = series;
     }
 
-    const to   = data.length - 1;
-    const from = fromIdx;
-    chart.timeScale().setVisibleLogicalRange({ from, to });
+    // ── Volume histogram ──────────────────────────────────────────────────────
+    const volSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: 'volume' },
+      priceScaleId: 'volume',
+    });
+    // Volume scale occupies the bottom 20% of the chart
+    chart.priceScale('volume').applyOptions({
+      scaleMargins: { top: 0.8, bottom: 0 },
+    });
+    const volData = isIntraday(interval)
+      ? data.map((r) => ({
+          time:  toTimestamp(r.date) as Time,
+          value: r.volume,
+          color: r.close >= r.open ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)',
+        }))
+      : data.map((r) => ({
+          time:  r.date as Time,
+          value: r.volume,
+          color: r.close >= r.open ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)',
+        }));
+    volSeries.setData(volData);
+    volumeRef.current = volSeries;
+
+    chart.timeScale().setVisibleLogicalRange({ from: fromIdx, to: data.length - 1 });
 
     const onResize = () => {
       if (containerRef.current) chart.applyOptions({ width: containerRef.current.clientWidth });
     };
     window.addEventListener('resize', onResize);
-    return () => { window.removeEventListener('resize', onResize); chart.remove(); chartRef.current = null; seriesRef.current = null; };
+    return () => {
+      window.removeEventListener('resize', onResize);
+      chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+      volumeRef.current = null;
+    };
   }, [data, chartStyle]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!chartRef.current || data.length === 0) return;
     const fromIdx = getFromIndex(data, timeframe, interval);
-    const to = data.length - 1;
-    chartRef.current.timeScale().setVisibleLogicalRange({ from: fromIdx, to });
+    chartRef.current.timeScale().setVisibleLogicalRange({ from: fromIdx, to: data.length - 1 });
 
     const ch = computeChange(data, fromIdx);
     setChange(ch);
