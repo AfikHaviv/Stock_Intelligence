@@ -54,7 +54,7 @@ export default function StatsPanel({ dailyData, stats, theme }: Props) {
       <StatCard label="Highest Close" value={price(highestClose, cur)}          theme={theme} />
       <StatCard label="Market Cap"    value={compactCap(stats?.marketCap ?? null, cur)} theme={theme} />
       <StatCard label="52-Week Range" value={weekRange}                          theme={theme} />
-      <StatCard label="Volume"        value={compactVol(stats?.volume ?? null)}  theme={theme} />
+      <StatCard label="Total Volume"  value={compactVol(stats?.volume ?? null)}  theme={theme} />
     </div>
   );
 }
