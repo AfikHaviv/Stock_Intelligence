@@ -153,6 +153,29 @@ export async function getStockStats(ticker: string): Promise<StockStats> {
   };
 }
 
+export interface SearchResult {
+  ticker:   string;
+  name:     string | null;
+  exchange: string | null;
+  type:     string | null;
+}
+
+export async function searchTickers(query: string): Promise<SearchResult[]> {
+  const result = await yahooFinance.search(query, { newsCount: 0 });
+  return result.quotes
+    .filter((q) => (q.quoteType === 'EQUITY' || q.quoteType === 'ETF') && typeof q.symbol === 'string')
+    .slice(0, 8)
+    .map((q) => {
+      const name =
+        ('longname'  in q && typeof q.longname  === 'string' ? q.longname  : null) ??
+        ('shortname' in q && typeof q.shortname === 'string' ? q.shortname : null) ??
+        null;
+      const exchange =
+        ('exchDisp' in q && typeof q.exchDisp === 'string' ? q.exchDisp : null) ?? null;
+      return { ticker: q.symbol as string, name, exchange, type: (q.quoteType as string) ?? null };
+    });
+}
+
 export function dbRowToPriceRow(r: Record<string, unknown>): PriceRow {
   return {
     date:   (r.date as Date).toISOString().split('T')[0],

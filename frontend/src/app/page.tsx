@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import StatsPanel, { LiveStats } from '../components/StatsPanel';
+import TickerAutocomplete from '../components/TickerAutocomplete';
 
 const StockChart = dynamic(() => import('../components/StockChart'), { ssr: false });
 
@@ -129,9 +130,8 @@ export default function Home() {
     })();
   }, [interval, activeTicker, cacheKey, intradayCache]);
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const sym = ticker.trim().toUpperCase();
+  async function handleSearch(overrideSym?: string) {
+    const sym = (overrideSym ?? ticker).trim().toUpperCase();
     if (!sym) return;
     setLoading(true);
     setError('');
@@ -182,14 +182,17 @@ export default function Home() {
         </div>
 
         {/* Search */}
-        <form onSubmit={handleSearch} className="flex gap-3">
-          <input
-            type="text"
+        <form
+          onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
+          className="flex gap-3"
+        >
+          <TickerAutocomplete
             value={ticker}
-            onChange={(e) => setTicker(e.target.value)}
+            onChange={setTicker}
+            onSelect={(sym) => handleSearch(sym)}
+            theme={theme}
+            inputClassName={`rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 uppercase ${t.input}`}
             placeholder="e.g. AAPL"
-            className={`flex-1 max-w-xs rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 uppercase ${t.input}`}
-            suppressHydrationWarning
           />
           <button type="submit" disabled={loading} className={`rounded-lg px-5 py-2 font-medium transition-colors ${t.btnPrimary}`}>
             {loading ? 'Loading…' : 'Search'}

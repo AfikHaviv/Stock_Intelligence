@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { getOrFetchStock, getHourlyData, get30MinData, get15MinData, getStockStats } from '../services/stockService';
+import { getOrFetchStock, getHourlyData, get30MinData, get15MinData, getStockStats, searchTickers } from '../services/stockService';
 
 const TICKER_RE = /^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,4})?$/;
 
@@ -20,7 +20,22 @@ function tickerRoute(handler: Handler) {
   };
 }
 
+type SearchReq = FastifyRequest<{ Querystring: { q?: string } }>;
+
 export async function stockRoutes(app: FastifyInstance) {
+  // Static route must be registered before /:ticker to take priority
+  app.get('/api/stocks/search', async (req: SearchReq, reply) => {
+    const q = (req.query.q ?? '').trim();
+    if (!q)        return reply.send([]);
+    if (q.length > 50) return reply.status(400).send({ error: 'Query too long' });
+    try {
+      return reply.send(await searchTickers(q));
+    } catch (e) {
+      console.error('[search error]', e instanceof Error ? e.message : e);
+      return reply.status(500).send({ error: 'Search failed' });
+    }
+  });
+
   app.get('/api/stocks/:ticker',        tickerRoute(getOrFetchStock));
   app.get('/api/stocks/:ticker/hourly', tickerRoute(getHourlyData));
   app.get('/api/stocks/:ticker/30min',  tickerRoute(get30MinData));
