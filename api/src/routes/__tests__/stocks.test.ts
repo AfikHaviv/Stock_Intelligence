@@ -8,6 +8,8 @@ vi.mock('../../services/stockService', () => ({
   get30MinData:    vi.fn(),
   get15MinData:    vi.fn(),
   getStockStats:   vi.fn(),
+  getStockNews:    vi.fn(),
+  searchTickers:   vi.fn(),
 }));
 
 import { stockRoutes } from '../stocks';
@@ -16,6 +18,7 @@ import * as svc from '../../services/stockService';
 const mockGetOrFetchStock = vi.mocked(svc.getOrFetchStock);
 const mockGetHourlyData   = vi.mocked(svc.getHourlyData);
 const mockGetStockStats   = vi.mocked(svc.getStockStats);
+const mockGetStockNews    = vi.mocked(svc.getStockNews);
 
 const FAKE_PRICES = [
   { date: '2024-01-01', open: 100, high: 110, low: 90, close: 105, volume: 1000 },
@@ -116,6 +119,39 @@ describe('GET /api/stocks/:ticker/stats', () => {
   it('returns 500 when the stats service throws', async () => {
     mockGetStockStats.mockRejectedValue(new Error('Yahoo Finance timeout'));
     const res = await app.inject({ method: 'GET', url: '/api/stocks/AAPL/stats' });
+    expect(res.statusCode).toBe(500);
+    expect(res.json().error).toBe('Internal server error');
+  });
+});
+
+describe('GET /api/stocks/:ticker/news', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>;
+
+  beforeEach(async () => { app = await buildApp(); });
+  afterEach(async () => { await app.close(); vi.clearAllMocks(); });
+
+  const FAKE_NEWS = [
+    { title: 'Apple reports record earnings', publisher: 'Reuters',
+      link: 'https://example.com/1', publishedAt: '2024-01-01T12:00:00Z', imageUrl: null },
+  ];
+
+  it('returns 400 for an invalid ticker', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/stocks/BAD!TKR/news' });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toEqual({ error: 'Invalid ticker' });
+  });
+
+  it('returns 200 with news articles for a valid ticker', async () => {
+    mockGetStockNews.mockResolvedValue(FAKE_NEWS);
+    const res = await app.inject({ method: 'GET', url: '/api/stocks/AAPL/news' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual(FAKE_NEWS);
+    expect(mockGetStockNews).toHaveBeenCalledWith('AAPL');
+  });
+
+  it('returns 500 when the news service throws', async () => {
+    mockGetStockNews.mockRejectedValue(new Error('network error'));
+    const res = await app.inject({ method: 'GET', url: '/api/stocks/AAPL/news' });
     expect(res.statusCode).toBe(500);
     expect(res.json().error).toBe('Internal server error');
   });

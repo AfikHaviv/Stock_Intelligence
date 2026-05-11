@@ -1,5 +1,6 @@
 import YahooFinance from 'yahoo-finance2';
 import { db } from '../db/client';
+import { buildFilterTerms, filterRelevantNews } from './newsUtils';
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
@@ -162,13 +163,23 @@ export interface NewsArticle {
 }
 
 export async function getStockNews(ticker: string): Promise<NewsArticle[]> {
-  const result = await yahooFinance.search(ticker.toUpperCase(), {
-    newsCount:   10,
-    quotesCount: 0,
-  });
+  const upper = ticker.toUpperCase();
 
-  return result.news.map((item) => {
-    // Pick the largest thumbnail available
+  // Resolve company name for relevance filtering (best-effort — never throws)
+  let companyName: string | null = null;
+  try {
+    const q = await yahooFinance.quote(upper);
+    companyName = q.shortName ?? q.longName ?? null;
+  } catch { /* proceed with ticker-only filtering */ }
+
+  const filterTerms = buildFilterTerms(upper, companyName);
+
+  // Fetch 20 so the filter has room to work; we return at most 10
+  const result = await yahooFinance.search(upper, { newsCount: 20, quotesCount: 0 });
+
+  const relevant = filterRelevantNews(result.news, filterTerms);
+
+  return relevant.slice(0, 10).map((item) => {
     const resolutions =
       item.thumbnail && Array.isArray(item.thumbnail.resolutions)
         ? (item.thumbnail.resolutions as Array<{ url: string; width: number }>)
