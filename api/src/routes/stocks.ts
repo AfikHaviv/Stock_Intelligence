@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { getOrFetchStock, getHourlyData, get30MinData, get15MinData, getStockStats, searchTickers } from '../services/stockService';
+import { getOrFetchStock, getHourlyData, get30MinData, get15MinData, getStockStats, searchTickers, getStockNews } from '../services/stockService';
 
 const TICKER_RE = /^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,4})?$/;
 
@@ -41,4 +41,5 @@ export async function stockRoutes(app: FastifyInstance) {
   app.get('/api/stocks/:ticker/30min',  tickerRoute(get30MinData));
   app.get('/api/stocks/:ticker/15min',  tickerRoute(get15MinData));
   app.get('/api/stocks/:ticker/stats',  tickerRoute(getStockStats));
+  app.get('/api/stocks/:ticker/news',   tickerRoute(getStockNews));
 }

@@ -153,6 +153,38 @@ export async function getStockStats(ticker: string): Promise<StockStats> {
   };
 }
 
+export interface NewsArticle {
+  title:       string;
+  publisher:   string;
+  link:        string;
+  publishedAt: string;   // ISO string
+  imageUrl:    string | null;
+}
+
+export async function getStockNews(ticker: string): Promise<NewsArticle[]> {
+  const result = await yahooFinance.search(ticker.toUpperCase(), {
+    newsCount:   10,
+    quotesCount: 0,
+  });
+
+  return result.news.map((item) => {
+    // Pick the largest thumbnail available
+    const resolutions =
+      item.thumbnail && Array.isArray(item.thumbnail.resolutions)
+        ? (item.thumbnail.resolutions as Array<{ url: string; width: number }>)
+        : [];
+    const best = resolutions.sort((a, b) => b.width - a.width)[0] ?? null;
+
+    return {
+      title:       item.title,
+      publisher:   item.publisher,
+      link:        item.link,
+      publishedAt: (item.providerPublishTime as Date).toISOString(),
+      imageUrl:    best?.url ?? null,
+    };
+  });
+}
+
 export interface SearchResult {
   ticker:   string;
   name:     string | null;

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import StatsPanel, { LiveStats } from '../components/StatsPanel';
 import TickerAutocomplete from '../components/TickerAutocomplete';
+import NewsSection, { NewsArticle } from '../components/NewsSection';
 
 const StockChart = dynamic(() => import('../components/StockChart'), { ssr: false });
 
@@ -97,6 +98,8 @@ export default function Home() {
   const [timeframe, setTimeframe]         = useState<Timeframe>('6M');
   const [interval, setInterval]           = useState<Interval>('day');
   const [chartStyle, setChartStyle]       = useState<ChartStyle>('candle');
+  const [news, setNews]                   = useState<NewsArticle[]>([]);
+  const [loadingNews, setLoadingNews]     = useState(false);
   const [loading, setLoading]             = useState(false);
   const [loadingIntraday, setLoadingIntraday] = useState(false);
   const [error, setError]                 = useState('');
@@ -137,6 +140,7 @@ export default function Home() {
     setError('');
     setDailyData([]);
     setStats(null);
+    setNews([]);
     setIntradayCache({});
     setTimeframe('6M');
     setInterval('day');
@@ -153,6 +157,14 @@ export default function Home() {
       setDailyData(priceJson);
       setStats(statsJson);
       setActiveTicker(sym);
+
+      // Fetch news in the background — don't block the chart from rendering
+      setLoadingNews(true);
+      fetch(`${API_BASE}/api/stocks/${sym}/news`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((articles: NewsArticle[]) => setNews(articles))
+        .catch(() => setNews([]))
+        .finally(() => setLoadingNews(false));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong');
     } finally {
@@ -286,6 +298,19 @@ export default function Home() {
             {/* Stats */}
             <StatsPanel dailyData={dailyData} stats={stats} theme={theme} />
           </div>
+        )}
+
+        {/* News — shown once a ticker is active, even while chart data loads */}
+        {(showChart || loadingNews) && (
+          <>
+            <hr className={theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} />
+            <NewsSection
+              articles={news}
+              loading={loadingNews}
+              ticker={activeTicker || ticker.trim().toUpperCase()}
+              theme={theme}
+            />
+          </>
         )}
       </div>
     </main>
