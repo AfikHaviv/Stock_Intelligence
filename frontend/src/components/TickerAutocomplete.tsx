@@ -123,7 +123,7 @@ export default function TickerAutocomplete({
               onClick={() => pick(s.ticker)}
               className={`${itemBase} ${itemHover} ${i === activeIdx ? itemHl : ''}`}
             >
-              <span className={`font-semibold w-20 shrink-0 ${tickerColor}`}>{s.ticker}</span>
+              <span className={`font-mono font-semibold w-20 shrink-0 ${tickerColor}`}>{s.ticker}</span>
               <span className={`truncate min-w-0 ${nameColor}`}>{s.name ?? '—'}</span>
               {s.exchange && (
                 <span className={`ml-auto text-xs px-1.5 py-0.5 rounded shrink-0 ${exchBg}`}>

@@ -251,15 +251,15 @@ export default function StockChart({ data, ticker, companyName, exchangeName, cu
   return (
     <div className={`rounded-xl overflow-hidden border ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
       <div className={`px-4 py-3 ${h.wrap} flex items-center gap-2`}>
-        <span className={`font-semibold text-base ${h.title}`}>{companyName ?? ticker}</span>
-        <span className={`text-sm ${h.sub}`}>({subtitle})</span>
+        <span className={`font-semibold text-[15px] ${h.title}`}>{companyName ?? ticker}</span>
+        <span className={`text-[13px] ${h.sub}`}>({subtitle})</span>
         {showChange && (
-          <span className={`ml-auto text-sm font-semibold ${isUp ? 'text-green-500' : 'text-red-500'}`}>
+          <span className={`ml-auto font-mono text-sm font-semibold ${isUp ? 'text-green-500' : 'text-red-500'}`}>
             {formatChange(change!, currency)}
           </span>
         )}
         {!showChange && (
-          <span className={`ml-auto text-xs ${h.meta}`}>{interval} candles</span>
+          <span className={`ml-auto font-mono text-xs ${h.meta}`}>{interval} candles</span>
         )}
       </div>
 
@@ -282,6 +282,7 @@ export default function StockChart({ data, ticker, companyName, exchangeName, cu
             minWidth: '140px',
             lineHeight: '1.6',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+            fontFamily: 'var(--font-geist-mono), ui-monospace, monospace',
           }}
         />
       </div>

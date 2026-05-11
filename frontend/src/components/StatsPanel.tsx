@@ -30,7 +30,7 @@ function StatCard({ label, value, theme }: { label: string; value: string; theme
   return (
     <div className={`rounded-lg px-4 py-3 border ${CARD[theme]}`}>
       <p className={`text-xs uppercase tracking-wider mb-1 ${LABEL[theme]}`}>{label}</p>
-      <p className={`font-semibold text-sm ${VALUE[theme]}`}>{value}</p>
+      <p className={`font-mono font-semibold text-sm ${VALUE[theme]}`}>{value}</p>
     </div>
   );
 }

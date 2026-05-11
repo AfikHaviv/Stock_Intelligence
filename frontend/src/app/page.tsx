@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import StatsPanel, { LiveStats } from '../components/StatsPanel';
 import TickerAutocomplete from '../components/TickerAutocomplete';
 import NewsSection, { NewsArticle } from '../components/NewsSection';
+import StockLoader from '../components/StockLoader';
 
 const StockChart = dynamic(() => import('../components/StockChart'), { ssr: false });
 
@@ -181,9 +182,34 @@ export default function Home() {
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Stock Intelligence</h1>
-            <p className={`mt-1 ${t.subtitle}`}>Search a ticker to view its full price history</p>
+          <div className="flex items-center gap-3">
+            {/* Candlestick brand mark */}
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="36" height="36" className="shrink-0" aria-hidden="true">
+              <defs>
+                <linearGradient id="mark-grad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stopColor="#3b82f6" />
+                  <stop offset="1" stopColor="#6366f1" />
+                </linearGradient>
+              </defs>
+              <rect width="32" height="32" rx="6" fill={theme === 'dark' ? '#0f172a' : '#1e293b'} />
+              <g transform="translate(6 4)">
+                <rect x="0"    y="6"  width="3" height="14" rx="0.5" fill="#22c55e" />
+                <rect x="-1.5" y="3"  width="6" height="2"           fill="#22c55e" />
+                <rect x="-1.5" y="21" width="6" height="2"           fill="#22c55e" />
+                <rect x="8"    y="2"  width="3" height="20" rx="0.5" fill="url(#mark-grad)" />
+                <rect x="6.5"  y="0"  width="6" height="2"           fill="url(#mark-grad)" />
+                <rect x="6.5"  y="22" width="6" height="2"           fill="url(#mark-grad)" />
+                <rect x="16"   y="8"  width="3" height="10" rx="0.5" fill="#ef4444" />
+                <rect x="14.5" y="5"  width="6" height="2"           fill="#ef4444" />
+                <rect x="14.5" y="19" width="6" height="2"           fill="#ef4444" />
+              </g>
+            </svg>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight leading-none">
+                Stock<span className={`font-medium ${t.subtitle}`}> Intelligence</span>
+              </h1>
+              <p className={`mt-1 text-sm ${t.subtitle}`}>Search a ticker to view its full price history</p>
+            </div>
           </div>
           <button
             onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
@@ -212,6 +238,13 @@ export default function Home() {
         </form>
 
         {error && <p className={`text-sm ${t.error}`}>{error}</p>}
+
+        {/* Full-page loading state while the first fetch runs */}
+        {loading && (
+          <div className="flex items-center justify-center py-16">
+            <StockLoader />
+          </div>
+        )}
 
         {showChart && (
           <div className="space-y-4">
@@ -278,8 +311,8 @@ export default function Home() {
 
             {/* Chart */}
             {showSpinner ? (
-              <div className={`flex items-center justify-center h-40 text-sm ${t.spinner}`}>
-                Loading {interval} data...
+              <div className="flex items-center justify-center" style={{ height: 420 }}>
+                <StockLoader />
               </div>
             ) : (
               <StockChart

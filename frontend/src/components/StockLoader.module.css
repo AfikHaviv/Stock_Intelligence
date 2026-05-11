@@ -1,0 +1,111 @@
+.stage {
+  width: 200px;
+  height: 200px;
+  position: relative;
+}
+
+/* ── Outer whirl — two counter-rotating rings ──────────────────────────── */
+.whirl {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.whirl::before,
+.whirl::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+}
+.whirl::before {
+  border-top-color:   rgba(241, 245, 249, 0.85);
+  border-right-color: rgba(241, 245, 249, 0.25);
+  animation: si-spin 1.8s cubic-bezier(.5,.1,.5,.9) infinite;
+  mask: radial-gradient(circle, transparent 62%, #000 64%);
+  -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%);
+}
+.whirl::after {
+  inset: 12px;
+  border-top-color:  rgba(241, 245, 249, 0.45);
+  border-left-color: rgba(241, 245, 249, 0.12);
+  animation: si-spin 2.6s cubic-bezier(.5,.1,.5,.9) infinite reverse;
+}
+
+/* ── Orbital pinpricks ─────────────────────────────────────────────────── */
+.orbit {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  animation: si-spin 3.4s linear infinite;
+}
+.dot {
+  position: absolute;
+  border-radius: 50%;
+  background: #f1f5f9;
+  top: 50%;
+  left: 50%;
+  box-shadow: 0 0 12px rgba(241, 245, 249, 0.7);
+}
+
+/* ── Inner chart circle ────────────────────────────────────────────────── */
+.chart {
+  position: absolute;
+  inset: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.chart svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── Stock line ─────────────────────────────────────────────────────────── */
+.line {
+  fill: none;
+  stroke: #f1f5f9;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: si-draw 2.4s cubic-bezier(.65,.05,.36,1) infinite;
+  filter: drop-shadow(0 0 6px rgba(241, 245, 249, 0.35));
+}
+
+/* ── Riding dot ─────────────────────────────────────────────────────────── */
+.pulse {
+  fill: #f1f5f9;
+  opacity: 0;
+  animation: si-ride 2.4s cubic-bezier(.65,.05,.36,1) infinite;
+  filter: drop-shadow(0 0 8px rgba(241, 245, 249, 0.9));
+}
+
+/* ── Grid lines ─────────────────────────────────────────────────────────── */
+.grid {
+  stroke: rgba(241, 245, 249, 0.08);
+  stroke-width: 1;
+}
+
+/* ── Keyframes ──────────────────────────────────────────────────────────── */
+@keyframes si-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes si-draw {
+  0%   { stroke-dashoffset: 600; opacity: 1; }
+  55%  { stroke-dashoffset: 0;   opacity: 1; }
+  78%  { stroke-dashoffset: 0;   opacity: 1; }
+  100% { stroke-dashoffset: 0;   opacity: 0; }
+}
+
+@keyframes si-ride {
+  0%   { opacity: 0; offset-distance: 0%;   }
+  8%   { opacity: 1; }
+  55%  { opacity: 1; offset-distance: 100%; }
+  78%  { opacity: 1; offset-distance: 100%; }
+  100% { opacity: 0; offset-distance: 100%; }
+}
