@@ -23,7 +23,9 @@ Thumbs.db
 .vscode/settings.json
 .claude/
 CLAUDE.md
+AGENTS.md
 GETTING_STARTED.md
+frontend/README.md
 
 # TypeScript cache
 *.tsbuildinfo
