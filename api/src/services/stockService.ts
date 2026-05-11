@@ -1,6 +1,6 @@
 import YahooFinance from 'yahoo-finance2';
 import { db } from '../db/client';
-import { buildFilterTerms, filterRelevantNews } from './newsUtils';
+import { buildFilterTerms, extractSearchQuery, filterRelevantNews, isTitleRelevant } from './newsUtils';
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
@@ -162,38 +162,65 @@ export interface NewsArticle {
   imageUrl:    string | null;
 }
 
+function toNewsArticle(item: {
+  title: string;
+  publisher: string;
+  link: string;
+  providerPublishTime: unknown;
+  thumbnail?: { resolutions?: unknown };
+}): NewsArticle {
+  const resolutions =
+    item.thumbnail && Array.isArray((item.thumbnail as { resolutions?: unknown }).resolutions)
+      ? ((item.thumbnail as { resolutions: Array<{ url: string; width: number }> }).resolutions)
+      : [];
+  const best = resolutions.slice().sort((a, b) => b.width - a.width)[0] ?? null;
+  return {
+    title:       item.title,
+    publisher:   item.publisher,
+    link:        item.link,
+    publishedAt: (item.providerPublishTime as Date).toISOString(),
+    imageUrl:    best?.url ?? null,
+  };
+}
+
 export async function getStockNews(ticker: string): Promise<NewsArticle[]> {
   const upper = ticker.toUpperCase();
 
-  // Resolve company name for relevance filtering (best-effort — never throws)
+  // Resolve company name for filtering and fallback search (best-effort)
   let companyName: string | null = null;
   try {
     const q = await yahooFinance.quote(upper);
     companyName = q.shortName ?? q.longName ?? null;
-  } catch { /* proceed with ticker-only filtering */ }
+  } catch { /* proceed with ticker-only */ }
 
   const filterTerms = buildFilterTerms(upper, companyName);
 
-  // Fetch 20 so the filter has room to work; we return at most 10
-  const result = await yahooFinance.search(upper, { newsCount: 20, quotesCount: 0 });
+  // ── Pass 1: search by ticker symbol ──────────────────────────────────────
+  const primary = await yahooFinance.search(upper, { newsCount: 20, quotesCount: 0 });
+  let pool = [...primary.news];
 
-  const relevant = filterRelevantNews(result.news, filterTerms);
+  // ── Pass 2: if ticker search is too noisy, also search by company name ───
+  // This is the key fix for foreign/small-cap tickers (e.g. ELAL.TA, ESLT.TA)
+  // where Yahoo's keyword index doesn't map the ticker to the right news feed.
+  const primaryHits = pool.filter((a) => isTitleRelevant(a.title, filterTerms));
+  if (primaryHits.length < 4 && companyName) {
+    const nameQuery = extractSearchQuery(companyName);
+    if (nameQuery && nameQuery.toUpperCase() !== upper) {
+      try {
+        const secondary = await yahooFinance.search(nameQuery, { newsCount: 20, quotesCount: 0 });
+        // Merge, deduplicating by exact title
+        const seen = new Set(pool.map((a) => a.title));
+        for (const item of secondary.news) {
+          if (!seen.has(item.title)) { pool.push(item); seen.add(item.title); }
+        }
+      } catch { /* secondary search is best-effort */ }
+    }
+  }
 
-  return relevant.slice(0, 10).map((item) => {
-    const resolutions =
-      item.thumbnail && Array.isArray(item.thumbnail.resolutions)
-        ? (item.thumbnail.resolutions as Array<{ url: string; width: number }>)
-        : [];
-    const best = resolutions.sort((a, b) => b.width - a.width)[0] ?? null;
-
-    return {
-      title:       item.title,
-      publisher:   item.publisher,
-      link:        item.link,
-      publishedAt: (item.providerPublishTime as Date).toISOString(),
-      imageUrl:    best?.url ?? null,
-    };
-  });
+  // minRelevant = 0 disables the fallback — we never want to return unrelated
+  // market noise. The frontend already handles an empty array gracefully.
+  const relevant = filterRelevantNews(pool, filterTerms, 0);
+  return relevant.slice(0, 10).map(toNewsArticle);
 }
 
 export interface SearchResult {

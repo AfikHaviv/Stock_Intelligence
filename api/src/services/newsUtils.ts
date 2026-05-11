@@ -5,7 +5,7 @@
 
 /** Legal-suffix words that carry no identity signal. */
 const STRIP_RE =
-  /\b(Inc\.?|Corp\.?|Ltd\.?|Co\.?|LLC|PLC|SA|AG|NV|SE|Group|Holdings?|International|Technologies?|Systems?|Solutions?|Services?|Enterprises?|Corporation)\b/gi;
+  /\b(Inc\.?|Corp\.?|Ltd\.?|Co\.?|LLC|PLC|SA|AG|NV|SE|Group|Holdings?|International|Technologies?|Systems?|Solutions?|Services?|Enterprises?|Corporation|Airlines?|Bank|Financial|Energy|Capital|Industries|Pharmaceuticals?|Biotech)\b/gi;
 
 /**
  * Build the set of uppercase terms to look for in an article headline.
@@ -14,7 +14,7 @@ const STRIP_RE =
  * - Always include the full ticker (e.g. "ESLT.TA").
  * - For international tickers (contains "."), also add the base part ("ESLT").
  * - From the company name, strip legal suffixes and punctuation, then keep
- *   tokens that are at least 3 characters long.
+ *   tokens that are at least 2 characters long (handles brands like "El Al").
  */
 export function buildFilterTerms(
   ticker: string,
@@ -31,11 +31,11 @@ export function buildFilterTerms(
 
   if (companyName) {
     const tokens = companyName
-      .replace(/[,'."]/g, ' ')   // normalise punctuation first
+      .replace(/[,'."&]/g, ' ')    // normalise punctuation first
       .replace(STRIP_RE, ' ')
       .trim()
       .split(/\s+/)
-      .filter((t) => t.length >= 3);
+      .filter((t) => t.length >= 2); // 2-char min: captures "El", "Al", etc.
 
     tokens.forEach((t) => terms.add(t.toUpperCase()));
   }
@@ -44,20 +44,38 @@ export function buildFilterTerms(
 }
 
 /**
- * Return true if the article title contains at least one of the filter terms
- * as a whole-word (or parenthesised) match.
+ * Extract a clean search query from a company name, for use as a fallback
+ * when the ticker symbol yields poor Yahoo Finance search results.
  *
- * We use a simple `.includes()` check — exact substring is fast and good
- * enough for company names / ticker symbols. A "word-ish" boundary check
- * (`\b` or surrounded by non-alphanumeric) prevents e.g. "AAPL" matching
- * "MAPLE", but in practice financial headlines are unambiguous.
+ * "El Al Israel Airlines Ltd." → "El Al"
+ * "Apple Inc."                 → "Apple"
+ * "NVIDIA Corporation"         → "NVIDIA"
+ * "Tesla, Inc."                → "Tesla"
+ */
+export function extractSearchQuery(companyName: string): string | null {
+  const tokens = companyName
+    .replace(/[,'."&]/g, ' ')
+    .replace(STRIP_RE, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter((t) => t.length >= 2);
+
+  if (tokens.length === 0) return null;
+  // Use at most the first 2 meaningful words — enough to be specific,
+  // not so many that the search becomes too narrow.
+  return tokens.slice(0, 2).join(' ');
+}
+
+/**
+ * Return true if the article title contains at least one of the filter terms
+ * at a word boundary (preceded and followed by a non-alphanumeric character).
+ * This prevents e.g. "AAPL" matching "MAPLE" or "EL" matching "INTEL".
  */
 export function isTitleRelevant(title: string, filterTerms: string[]): boolean {
   const upper = title.toUpperCase();
   return filterTerms.some((term) => {
     const idx = upper.indexOf(term);
     if (idx === -1) return false;
-    // Verify the match is at a word boundary (preceded/followed by non-alpha)
     const before = idx === 0 || !/[A-Z0-9]/.test(upper[idx - 1]);
     const after  = idx + term.length >= upper.length || !/[A-Z0-9]/.test(upper[idx + term.length]);
     return before && after;
