@@ -65,37 +65,31 @@ describe('dbRowToPriceRow', () => {
 });
 
 // ── normalizeExchange ────────────────────────────────────────────────────────
+// Twelve Data returns clean exchange names (e.g. "NASDAQ", "NYSE", "TASE"),
+// so normalizeExchange now takes a single string and maps known variants.
 
 describe('normalizeExchange', () => {
-  it('returns "Nasdaq" for any name containing "nasdaq" (case-insensitive)', () => {
-    expect(normalizeExchange('NasdaqGS', 'NMS')).toBe('Nasdaq');
-    expect(normalizeExchange('NASDAQ Global Select Market', null)).toBe('Nasdaq');
-    expect(normalizeExchange('nasdaq', null)).toBe('Nasdaq');
+  it('returns "Nasdaq" for strings containing "nasdaq" (case-insensitive)', () => {
+    expect(normalizeExchange('NASDAQ')).toBe('Nasdaq');
+    expect(normalizeExchange('NasdaqGS')).toBe('Nasdaq');
+    expect(normalizeExchange('nasdaq')).toBe('Nasdaq');
   });
 
-  it('returns "NYSE" for any name containing "nyse" (case-insensitive)', () => {
-    expect(normalizeExchange('NYSE American', 'NYQ')).toBe('NYSE');
-    expect(normalizeExchange('NYSE Arca', null)).toBe('NYSE');
-    expect(normalizeExchange('New York Stock Exchange (NYSE)', null)).toBe('NYSE');
+  it('returns "NYSE" for strings containing "nyse" (case-insensitive)', () => {
+    expect(normalizeExchange('NYSE')).toBe('NYSE');
+    expect(normalizeExchange('NYSE Arca')).toBe('NYSE');
+    expect(normalizeExchange('nyse')).toBe('NYSE');
   });
 
-  it('returns the full name as-is for other known exchanges', () => {
-    expect(normalizeExchange('Tel Aviv Stock Exchange', 'TLV')).toBe('Tel Aviv Stock Exchange');
-    expect(normalizeExchange('London Stock Exchange', 'LSE')).toBe('London Stock Exchange');
+  it('returns the exchange string as-is for other exchanges', () => {
+    expect(normalizeExchange('TASE')).toBe('TASE');
+    expect(normalizeExchange('LSE')).toBe('LSE');
+    expect(normalizeExchange('XETRA')).toBe('XETRA');
   });
 
-  it('falls back to the exchange code when fullName is null', () => {
-    expect(normalizeExchange(null, 'TLV')).toBe('TLV');
-    expect(normalizeExchange(undefined, 'LSE')).toBe('LSE');
-  });
-
-  it('falls back to the exchange code when fullName is empty string', () => {
-    // empty string is falsy → should fall back
-    expect(normalizeExchange('', 'TLV')).toBe('TLV');
-  });
-
-  it('returns null when both arguments are null/undefined', () => {
-    expect(normalizeExchange(null, null)).toBeNull();
-    expect(normalizeExchange(undefined, undefined)).toBeNull();
+  it('returns null for null, undefined, or empty string', () => {
+    expect(normalizeExchange(null)).toBeNull();
+    expect(normalizeExchange(undefined)).toBeNull();
+    expect(normalizeExchange('')).toBeNull();
   });
 });
