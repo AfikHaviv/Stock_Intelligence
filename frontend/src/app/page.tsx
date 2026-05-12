@@ -191,7 +191,9 @@ export default function Home() {
                   <stop offset="1" stopColor="#6366f1" />
                 </linearGradient>
               </defs>
-              <rect width="32" height="32" rx="6" fill={theme === 'dark' ? '#0f172a' : '#1e293b'} />
+              {/* dark mode: lifted slate-800 against slate-900 page; light mode: white card with border */}
+              <rect width="32" height="32" rx="6" fill={theme === 'dark' ? '#1e293b' : '#ffffff'} />
+              {theme === 'light' && <rect width="32" height="32" rx="6" fill="none" stroke="#e2e8f0" strokeWidth="1" />}
               <g transform="translate(6 4)">
                 <rect x="0"    y="6"  width="3" height="14" rx="0.5" fill="#22c55e" />
                 <rect x="-1.5" y="3"  width="6" height="2"           fill="#22c55e" />
@@ -242,7 +244,7 @@ export default function Home() {
         {/* Full-page loading state while the first fetch runs */}
         {loading && (
           <div className="flex items-center justify-center py-16">
-            <StockLoader />
+            <StockLoader theme={theme} />
           </div>
         )}
 
@@ -312,7 +314,7 @@ export default function Home() {
             {/* Chart */}
             {showSpinner ? (
               <div className="flex items-center justify-center" style={{ height: 420 }}>
-                <StockLoader />
+                <StockLoader theme={theme} />
               </div>
             ) : (
               <StockChart

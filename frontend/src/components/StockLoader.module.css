@@ -19,16 +19,16 @@
   border: 1.5px solid transparent;
 }
 .whirl::before {
-  border-top-color:   rgba(241, 245, 249, 0.85);
-  border-right-color: rgba(241, 245, 249, 0.25);
+  border-top-color:   var(--si-ring-hi, rgba(241, 245, 249, 0.85));
+  border-right-color: var(--si-ring-lo, rgba(241, 245, 249, 0.25));
   animation: si-spin 1.8s cubic-bezier(.5,.1,.5,.9) infinite;
   mask: radial-gradient(circle, transparent 62%, #000 64%);
   -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%);
 }
 .whirl::after {
   inset: 12px;
-  border-top-color:  rgba(241, 245, 249, 0.45);
-  border-left-color: rgba(241, 245, 249, 0.12);
+  border-top-color:  var(--si-ring2-hi, rgba(241, 245, 249, 0.45));
+  border-left-color: var(--si-ring2-lo, rgba(241, 245, 249, 0.12));
   animation: si-spin 2.6s cubic-bezier(.5,.1,.5,.9) infinite reverse;
 }
 
@@ -42,10 +42,8 @@
 .dot {
   position: absolute;
   border-radius: 50%;
-  background: #f1f5f9;
   top: 50%;
   left: 50%;
-  box-shadow: 0 0 12px rgba(241, 245, 249, 0.7);
 }
 
 /* ── Inner chart circle ────────────────────────────────────────────────── */
@@ -66,28 +64,20 @@
 /* ── Stock line ─────────────────────────────────────────────────────────── */
 .line {
   fill: none;
-  stroke: #f1f5f9;
   stroke-width: 2.25;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: 600;
   stroke-dashoffset: 600;
   animation: si-draw 2.4s cubic-bezier(.65,.05,.36,1) infinite;
-  filter: drop-shadow(0 0 6px rgba(241, 245, 249, 0.35));
+  /* stroke & filter set inline for theme-awareness */
 }
 
 /* ── Riding dot ─────────────────────────────────────────────────────────── */
 .pulse {
-  fill: #f1f5f9;
   opacity: 0;
   animation: si-ride 2.4s cubic-bezier(.65,.05,.36,1) infinite;
-  filter: drop-shadow(0 0 8px rgba(241, 245, 249, 0.9));
-}
-
-/* ── Grid lines ─────────────────────────────────────────────────────────── */
-.grid {
-  stroke: rgba(241, 245, 249, 0.08);
-  stroke-width: 1;
+  /* fill & filter set inline for theme-awareness */
 }
 
 /* ── Keyframes ──────────────────────────────────────────────────────────── */
