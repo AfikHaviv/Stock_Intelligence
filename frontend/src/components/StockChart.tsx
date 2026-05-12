@@ -36,6 +36,23 @@ const CHART_COLORS = {
   light: { bg: '#ffffff', text: '#475569', grid: '#f1f5f9', border: '#e2e8f0' },
 };
 
+const TOOLTIP_STYLES = {
+  dark: {
+    background: 'rgba(15,23,42,0.92)',
+    border: '1px solid rgba(51,65,85,0.7)',
+    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+    label: '#94a3b8',
+    divider: 'rgba(148,163,184,0.2)',
+  },
+  light: {
+    background: 'rgba(255,255,255,0.96)',
+    border: '1px solid rgba(226,232,240,0.9)',
+    boxShadow: '0 10px 30px -8px rgba(0,0,0,0.15)',
+    label: '#64748b',
+    divider: 'rgba(100,116,139,0.2)',
+  },
+};
+
 const HEADER = {
   dark:  { wrap: 'bg-slate-800',  title: 'text-slate-100', sub: 'text-slate-500', meta: 'text-slate-400' },
   light: { wrap: 'bg-slate-100',  title: 'text-slate-900', sub: 'text-slate-400', meta: 'text-slate-500' },
@@ -153,7 +170,14 @@ export default function StockChart({ data, ticker, companyName, exchangeName, cu
 
     chart.timeScale().setVisibleLogicalRange({ from: fromIdx, to: data.length - 1 });
 
-    // ── Crosshair tooltip ─────────────────────────────────────────────────────
+    // ── Crosshair tooltip — apply initial theme styles ────────────────────────
+    const tt0 = TOOLTIP_STYLES[themeRef.current];
+    if (tooltipRef.current) {
+      tooltipRef.current.style.background = tt0.background;
+      tooltipRef.current.style.border     = tt0.border;
+      tooltipRef.current.style.boxShadow  = tt0.boxShadow;
+    }
+
     chart.subscribeCrosshairMove((param) => {
       const el  = tooltipRef.current;
       const box = containerRef.current;
@@ -170,19 +194,20 @@ export default function StockChart({ data, ticker, companyName, exchangeName, cu
       const up   = row.close >= row.open;
       const clr  = up ? COLOR_UP : COLOR_DOWN;
       const fmt2 = (n: number) => n.toFixed(2);
+      const tt   = TOOLTIP_STYLES[themeRef.current];
 
       el.innerHTML = `
         <div style="color:${clr};font-weight:700;margin-bottom:5px;font-size:11px;">
           ${fmtDate(row.date, isIntraday(interval))}
         </div>
         <div style="display:grid;grid-template-columns:auto auto;gap:2px 10px;font-size:11px;">
-          <span style="color:#94a3b8">Open</span>  <span>${fmt2(row.open)}</span>
-          <span style="color:#94a3b8">High</span>  <span style="color:#22c55e">${fmt2(row.high)}</span>
-          <span style="color:#94a3b8">Low</span>   <span style="color:#ef4444">${fmt2(row.low)}</span>
-          <span style="color:#94a3b8">Close</span> <span style="color:${clr}">${fmt2(row.close)}</span>
+          <span style="color:${tt.label}">Open</span>  <span>${fmt2(row.open)}</span>
+          <span style="color:${tt.label}">High</span>  <span style="color:#22c55e">${fmt2(row.high)}</span>
+          <span style="color:${tt.label}">Low</span>   <span style="color:#ef4444">${fmt2(row.low)}</span>
+          <span style="color:${tt.label}">Close</span> <span style="color:${clr}">${fmt2(row.close)}</span>
         </div>
-        <div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(148,163,184,0.2);font-size:11px;">
-          <span style="color:#94a3b8">Volume</span>&nbsp;&nbsp;<span>${fmtVol(row.volume)}</span>
+        <div style="margin-top:5px;padding-top:5px;border-top:1px solid ${tt.divider};font-size:11px;">
+          <span style="color:${tt.label}">Volume</span>&nbsp;&nbsp;<span>${fmtVol(row.volume)}</span>
         </div>`;
 
       el.style.display = 'block';
@@ -235,12 +260,20 @@ export default function StockChart({ data, ticker, companyName, exchangeName, cu
 
   useEffect(() => {
     if (!chartRef.current) return;
-    const c = CHART_COLORS[theme];
+    const c  = CHART_COLORS[theme];
+    const tt = TOOLTIP_STYLES[theme];
     chartRef.current.applyOptions({
       layout: { background: { color: c.bg }, textColor: c.text },
       grid:   { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
       timeScale: { borderColor: c.border },
     });
+    // Restyle the tooltip container to match the new theme
+    const el = tooltipRef.current;
+    if (el) {
+      el.style.background  = tt.background;
+      el.style.border      = tt.border;
+      el.style.boxShadow   = tt.boxShadow;
+    }
   }, [theme]);
 
   const h = HEADER[theme];
@@ -273,16 +306,14 @@ export default function StockChart({ data, ticker, companyName, exchangeName, cu
             position: 'absolute',
             pointerEvents: 'none',
             zIndex: 10,
-            background: 'rgba(15,23,42,0.88)',
             backdropFilter: 'blur(6px)',
             WebkitBackdropFilter: 'blur(6px)',
-            border: '1px solid rgba(51,65,85,0.7)',
             borderRadius: '8px',
             padding: '8px 10px',
             minWidth: '140px',
             lineHeight: '1.6',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
             fontFamily: 'var(--font-geist-mono), ui-monospace, monospace',
+            // theme-specific props applied via the theme effect below
           }}
         />
       </div>
