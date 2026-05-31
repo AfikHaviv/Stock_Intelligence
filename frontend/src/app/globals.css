@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* Class-based dark mode */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Map Next.js font variables → Tailwind utility names */
+@theme {
+  --font-family-sans: var(--font-geist-sans, ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif);
+  --font-family-mono: var(--font-geist-mono, ui-monospace, "JetBrains Mono", Menlo, monospace);
+}
+
+body {
+  font-family: var(--font-family-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Loader keyframes */
+@keyframes loader-spin-cw {
+  to { transform: rotate(360deg); }
+}
+@keyframes loader-spin-ccw {
+  to { transform: rotate(-360deg); }
+}
+@keyframes loader-orbit {
+  to { transform: rotate(360deg); }
+}

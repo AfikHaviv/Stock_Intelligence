@@ -1,0 +1,1 @@
+- [Stock Intel project](project_stock_intel.md) — V1 scaffold done, both workspaces type-check clean, needs .env + DB setup to run
