@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
 asyncpg
-pandas<2.0
-pandas-ta
+pandas>=2.0
+pandas-ta>=0.4.67b0
 python-dotenv
